@@ -1,0 +1,58 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local isCameraLocked = false
+
+-- Define the speed of the projectiles in the game
+local projectileSpeed = 200 -- Adjust this value based on the actual speed of projectiles in Da Hood
+
+local function onRenderStep()
+    if not isCameraLocked then return end
+
+    -- Find the closest player
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local distance = (head.Position - LocalPlayer.Character.Head.Position).magnitude
+
+            if distance < shortestDistance then
+                closestPlayer = player
+                shortestDistance = distance
+            end
+        end
+    end
+
+    -- Lock the camera onto a point slightly in front of the closest player's head
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+        local head = closestPlayer.Character.Head
+        local humanoidRootPart = closestPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+        if humanoidRootPart then
+            local velocity = humanoidRootPart.Velocity
+            local distanceToTarget = (head.Position - LocalPlayer.Character.Head.Position).magnitude
+            local timeToTarget = distanceToTarget / projectileSpeed
+            local offset = velocity * timeToTarget -- Adaptive offset based on target velocity and distance
+            local aimPosition = head.Position + offset
+
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
+        else
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+        end
+    end
+end
+
+local function onInputBegan(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.V then
+        isCameraLocked = not isCameraLocked
+    end
+end
+
+RunService.RenderStepped:Connect(onRenderStep)
+UserInputService.InputBegan:Connect(onInputBegan)
